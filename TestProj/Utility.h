@@ -1,16 +1,19 @@
 #ifndef __TETRIS_UTILITY_H__
 #define __TETRIS_UTILITY_H__
 
-#define SET_SYNTHESIZE_READONLY(vartype, varname) \
+#define MAP_SIZE_X 10
+#define MAP_SIZE_Y 20
+
+#define SET_SYNTHESIZE_READONLY(vartype, funcname, varname) \
 	private: vartype varname;\
-	public: vartype get##varname(){return varname;};\
-			void set##varname(vartype var){varname = var;};
+	public: vartype get##funcname(){return varname;};\
+			void set##funcname(vartype var){varname = var;};
 
 enum eSpaceType
 {
-	tBLANK,
-	tWALL,
-	tBLOCK
+	tBLANK = 0,
+	tWALL = 1,
+	tBLOCK = 2
 };
 
 struct Vec2

@@ -7,16 +7,13 @@ class Wall
 {
 
 private:
-	static Wall* instance;
-
-	explicit Wall();
 	virtual ~Wall();
-	void RemoveInstance();
 
-	Vec2 wall_size_;
-	Vec2 wall_pos_;
 public:
-	static Wall* create(Vec2 pos, Vec2 size);
-}
+	explicit Wall(Vec2 pos, Vec2 size);
+
+	SET_SYNTHESIZE_READONLY(Vec2, WallSize, wall_size_);
+	SET_SYNTHESIZE_READONLY(Vec2, WallPos, wall_pos_);
+};
 
 #endif

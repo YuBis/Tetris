@@ -8,24 +8,20 @@ class Wall;
 class World
 {
 private:
-	static World* instance;
-
-	explicit World();
 	virtual ~World();
-	void RemoveInstance();
 
-	void CreateMap(Vec2 mapsize);
 	void CreateWall();
 	void FillMap(Vec2 start_pos, Vec2 size, eSpaceType type);
 	void DrawMap();
 
 public:
-	static World* create();
+	explicit World();
+	void CreateMap();
 
 private:
-	Vec2 map_size_;
-	std::unordered_map<std::string, Wall*> map_wall_;
-
+	const Vec2 map_size_;
+	std::unordered_map<const char*, Wall*> map_wall_;
+	
 };
 
 #endif

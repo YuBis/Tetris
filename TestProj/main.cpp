@@ -9,7 +9,8 @@ int main()
 {
 	cout << "hello world!" << endl;
 
-	
+	auto _instance = World::create();
+	_instance->CreateMap();
 
 	return 0;
 }
