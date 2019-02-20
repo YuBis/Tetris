@@ -7,9 +7,9 @@ using namespace std;
 
 int main()
 {
-	cout << "hello world!" << endl;
+	//cout << "hello world!" << endl;
 
-	auto _instance = World::create();
+	auto _instance = new World();
 	_instance->CreateMap();
 
 	return 0;

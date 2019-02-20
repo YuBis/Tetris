@@ -1,7 +1,9 @@
 #ifndef __TETRIS_UTILITY_H__
 #define __TETRIS_UTILITY_H__
 
-#define MAP_SIZE_X 10
+#include <Windows.h>
+
+#define MAP_SIZE_X 20
 #define MAP_SIZE_Y 20
 
 #define SET_SYNTHESIZE_READONLY(vartype, funcname, varname) \
@@ -33,5 +35,11 @@ struct Vec2
 		y_ = y;
 	}
 };
+
+static void gotoxy(int x,int y)
+{
+	COORD pos={x,y};
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos); 
+}
 
 #endif

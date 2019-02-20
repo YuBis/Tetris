@@ -11,7 +11,7 @@ private:
 	virtual ~World();
 
 	void CreateWall();
-	void FillMap(Vec2 start_pos, Vec2 size, eSpaceType type);
+	void FillMap(const Vec2& start_pos, const Vec2& size, const eSpaceType& type);
 	void DrawMap();
 
 public:
@@ -19,7 +19,7 @@ public:
 	void CreateMap();
 
 private:
-	const Vec2 map_size_;
+	eSpaceType gameboard_[MAP_SIZE_X][MAP_SIZE_Y];
 	std::unordered_map<const char*, Wall*> map_wall_;
 	
 };
