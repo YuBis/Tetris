@@ -16,4 +16,4 @@ public:
 	SET_SYNTHESIZE_READONLY(Vec2, WallPos, wall_pos_);
 };
 
-#endif
+#endif // #ifndef __TETRIS_WALL_H__

@@ -9,8 +9,11 @@ int main()
 {
 	//cout << "hello world!" << endl;
 
-	auto _instance = new World();
-	_instance->CreateMap();
+	auto world_instance = World::getInstance();
+	if( world_instance != nullptr )
+	{
+		world_instance->CreateMap();
+	}
 
 	return 0;
 }
