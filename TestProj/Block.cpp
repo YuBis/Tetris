@@ -2,15 +2,19 @@
 #include "World.h"
 
 Block::Block(Vec2 pos) :
-bef_time_(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())),
+bef_time_(std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count()),
 my_pos_(pos)
 {
-	arr_move_dir_[0] = Vec2(0, 1);
-	arr_move_dir_[1] = Vec2(0, -1);
-	arr_move_dir_[2] = Vec2(-1, 0);
-	arr_move_dir_[3] = Vec2(1, 0);
+	arr_move_dir_[eDirection::tUP] = Vec2(0, -1);
+	arr_move_dir_[eDirection::tDOWN] = Vec2(0, 1);
+	arr_move_dir_[eDirection::tLEFT] = Vec2(-1, 0);
+	arr_move_dir_[eDirection::tRIGHT] = Vec2(1, 0);
 
-	Run();
+	std::fill(block_shape_.begin(), block_shape_.end(), NULL_VEC2);
+	//block_shape_[0] = Vec2(1, 1);
+	//block_shape_[1] = Vec2(0, 1);
+	//block_shape_[2] = Vec2(1, 0);
+	block_shape_[0] = Vec2(0, 0);
 }
 
 Block::~Block()
@@ -35,12 +39,14 @@ Block* Block::create(Vec2 pos)
 
 void Block::Run()
 {
-	while( true )
+	isRunning_ = true;
+
+	while( isRunning_ )
 	{
 		CheckKeyInput();
 
-		auto now_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-		if( now_time - bef_time_ > BLOCK_TICK )
+		auto now_time = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
+		if( now_time - bef_time_ >= BLOCK_TICK )
 		{
 
 			bef_time_ = now_time;
@@ -55,15 +61,19 @@ void Block::update()
 
 }
 
-void Block::MoveBlock(const eDirection& direction)
+void Block::MoveBlock(const eDirection& kDirection)
 {
-	if( !World::getInstance()->IsCanMoveBlock(my_pos_, arr_move_dir_[direction]) )
+	if( !World::getInstance()->IsCanMoveBlock(my_pos_, arr_move_dir_[kDirection]) )
+	{
+		isRunning_ = false;
+		World::getInstance()->RunningDone();
 		return;
+	}
 
 	auto bef_pos = my_pos_;
-	my_pos_ = my_pos_ + arr_move_dir_[direction];
+	my_pos_ = my_pos_ + arr_move_dir_[kDirection];
 
-	World::getInstance()->MoveBlock(bef_pos, my_pos_);
+	World::getInstance()->MoveBlock(bef_pos, arr_move_dir_[kDirection], &block_shape_);
 }
 
 /**

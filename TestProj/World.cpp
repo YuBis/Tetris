@@ -73,6 +73,7 @@ void World::CreateNextBlock()
 
 	if( block )
 	{
+		gameboard_[10][3] = eSpaceType::tBLOCK;
 		playing_block_ = block;
 		block->Run();
 	}
@@ -87,37 +88,38 @@ void World::RemoveLine()
 
 }
 
-bool World::IsCanCreateBlock(const Vec2& pos)
+bool World::IsCanCreateBlock(const Vec2& kPos) const
 {
-	return gameboard_[pos.x_][pos.y_] == eSpaceType::tBLANK;
+	return gameboard_[kPos.x_][kPos.y_] == eSpaceType::tBLANK;
 }
 
-bool World::IsCanMoveBlock(Vec2 pos, Vec2 dir)
+bool World::IsCanMoveBlock(const Vec2& pos, const Vec2& dir) const
 {
-	return GetBlockTypeByPos(pos + dir) == eSpaceType::tBLANK;
+	const auto kCheckingPos = pos + dir;
+	return GetBlockTypeByPos(kCheckingPos) == eSpaceType::tBLANK;
 }
 
-eSpaceType World::GetBlockTypeByPos(const Vec2& pos)
+eSpaceType World::GetBlockTypeByPos(const Vec2& kPos) const
 {
-	return gameboard_[pos.x_][pos.y_];
+	return gameboard_[kPos.x_][kPos.y_];
 }
 
-void World::FillMap(const Vec2& start_pos, const Vec2& size, const eSpaceType& type)
+void World::FillMap(const Vec2& kStartPos, const Vec2& kSize, const eSpaceType& kType)
 {
-	for( int y = start_pos.y_ ; y < start_pos.y_ + size.y_ ; ++y )
+	for( int y = kStartPos.y_ ; y < kStartPos.y_ + kSize.y_ ; ++y )
 	{
-		for( int x = start_pos.x_ ; x < start_pos.x_ + size.x_ ; ++x )
+		for( int x = kStartPos.x_ ; x < kStartPos.x_ + kSize.x_ ; ++x )
 		{
-			gameboard_[x][y] = type;
+			gameboard_[x][y] = kType;
 		}
 	}
 }
 
-void World::DrawMap(const Vec2& start_pos, const Vec2& size)
+void World::DrawMap(const Vec2& kStartPos, const Vec2& kSize)
 {
-	for( int y = start_pos.y_ ; y < size.y_ ; y++ )
+	for( int y = kStartPos.y_ ; y < kSize.y_ ; y++ )
 	{
-		for( int x = start_pos.x_ ; x < size.x_ ; x++ )
+		for( int x = kStartPos.x_ ; x < kSize.x_ ; x++ )
 		{
 			gotoxy(x, y);
 			putchar(GetBlockShape(gameboard_[x][y]));
@@ -130,10 +132,31 @@ void World::DrawMap()
 	DrawMap(Vec2(0, 0), Vec2(MAP_SIZE_X, MAP_SIZE_Y));
 }
 
-void World::MoveBlock(const Vec2& start_pos, const Vec2& end_pos)
+void World::MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::array<Vec2, tTETROMINO>* kBlockShape)
 {
-	auto start_pos = Vec2(std::min<int>(start_pos.x_, end_pos.x_), start_pos.y_);
-	auto draw_size = Vec2(abs(start_pos.x_ - end_pos.x_), abs(start_pos.y_ - end_pos.y_));
+	for (const auto& kBlockRelativeCoord : *kBlockShape)
+	{
+		if( kBlockRelativeCoord == NULL_VEC2 ) continue;
+
+		auto now_pos = kStartPos + kBlockRelativeCoord;
+		auto new_pos = now_pos + kMoveForce;
+		
+		gameboard_[now_pos.x_][now_pos.y_] = eSpaceType::tBLANK;
+		gameboard_[new_pos.x_][new_pos.y_] = eSpaceType::tBLOCK;
+	}
+
+	//auto startpos = Vec2(std::min<int>(kStartPos.x_, kStartPos.x_ + kMoveForce.x_), std::min<int>(kStartPos.y_, kStartPos.y_ + kMoveForce.y_));
+	//auto drawsize = Vec2(abs(start_pos.x_ - end_pos.x_), abs(start_pos.y_ - end_pos.y_));
 	 // todo : move block in array
-	DrawMap(start_pos, draw_size);
+	DrawMap();
+}
+
+void World::RunningDone(const int kPosY)
+{
+	sleeping_blocks_.insert(std::make_pair(kPosY, playing_block_));
+
+	if( IsCanCreateBlock(Vec2(10, 3)) )
+	{
+		CreateNextBlock();
+	}
 }

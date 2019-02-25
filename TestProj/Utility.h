@@ -7,10 +7,11 @@
 #include <cmath>
 #include <array>
 #include <unordered_map>
+#include <map>
 
 #define MAP_SIZE_X 20
 #define MAP_SIZE_Y 20
-#define BLOCK_TICK 1.f
+#define BLOCK_TICK 500.f
 
 // this macro must use on bottom of class
 // or, must re-declare access specifier after use it.
@@ -39,7 +40,9 @@ enum eSpaceType
 {
 	tBLANK = 0,
 	tWALL = 1,
-	tBLOCK = 2
+	tBLOCK = 2,
+
+	eSpaceType_COUNT
 };
 
 enum eDirection
@@ -47,7 +50,17 @@ enum eDirection
 	tUP = 0,
 	tDOWN = 1,
 	tLEFT = 2,
-	tRIGHT = 3
+	tRIGHT = 3,
+
+	eDirection_COUNT
+};
+
+enum eBlockCount
+{
+	tTROMINO = 3,
+	tTETROMINO = 4,
+	tPENTOMINO = 5,
+	tHEXOMINO = 6,
 };
 
 
@@ -68,13 +81,23 @@ struct Vec2
 		y_ = y;
 	}
 
-	Vec2& operator+(const Vec2& rhs)
+	const Vec2 &operator+(const Vec2& rhs) const
 	{
-		this->x_ += rhs.x_;
-		this->y_ += rhs.y_;
+		Vec2 result = *this;
+		
+		result.x_ += rhs.x_;
+		result.y_ += rhs.y_;
 
-		return *this;
+		return result;
 	}
+
+	const bool &operator==(const Vec2& rhs) const
+	{
+		return ( (*this).x_ == rhs.x_ && (*this).y_ == rhs.y_ );
+	}
+
+#define NULL_VEC2 (Vec2(INT_MAX, INT_MAX))
+
 };
 
 static void gotoxy(int x,int y)
