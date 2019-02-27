@@ -14,8 +14,8 @@ public:
 	static Block* create(Vec2 pos);
 	void Run();
 	void update();
+	void MoveToBottom();
 	void MoveBlock(const eDirection& kDirection);
-	void CheckKeyInput();
 
 private:
 	std::array<Vec2, eDirection_COUNT> arr_move_dir_;

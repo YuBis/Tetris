@@ -15,7 +15,7 @@ World* World::getInstance()
 }
 
 World::World() :
-playing_block_(nullptr)
+playing_polyo_(nullptr)
 {
 	for( int y = 0 ; y < MAP_SIZE_Y ; y++ )
 	{
@@ -88,9 +88,18 @@ void World::RemoveLine()
 
 }
 
-bool World::IsCanCreateBlock(const Vec2& kPos) const
+bool World::IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>& kRelativeCoordVec) const
 {
-	return gameboard_[kPos.x_][kPos.y_] == eSpaceType::tBLANK;
+	if( kRelativeCoordVec.size() == 0 )
+		return gameboard_[kPos.x_][kPos.y_] == eSpaceType::tBLANK;
+
+	for( const auto kCoord : kRelativeCoordVec )
+	{
+		if( gameboard_[kPos.x_ + kCoord.x_][kPos.y_ + kCoord.y_] != eSpaceType::tBLANK )
+			return false;
+	}
+
+	return true;
 }
 
 bool World::IsCanMoveBlock(const Vec2& pos, const Vec2& dir) const
@@ -117,6 +126,7 @@ void World::FillMap(const Vec2& kStartPos, const Vec2& kSize, const eSpaceType& 
 
 void World::DrawMap(const Vec2& kStartPos, const Vec2& kSize)
 {
+	draw_mutex_.lock();
 	for( int y = kStartPos.y_ ; y < kSize.y_ ; y++ )
 	{
 		for( int x = kStartPos.x_ ; x < kSize.x_ ; x++ )
@@ -125,6 +135,7 @@ void World::DrawMap(const Vec2& kStartPos, const Vec2& kSize)
 			putchar(GetBlockShape(gameboard_[x][y]));
 		}
 	}
+	draw_mutex_.unlock();
 }
 
 void World::DrawMap()
@@ -132,7 +143,7 @@ void World::DrawMap()
 	DrawMap(Vec2(0, 0), Vec2(MAP_SIZE_X, MAP_SIZE_Y));
 }
 
-void World::MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::array<Vec2, tTETROMINO>* kBlockShape)
+void World::MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::vector<Vec2>* kBlockShape)
 {
 	for (const auto& kBlockRelativeCoord : *kBlockShape)
 	{
@@ -151,11 +162,22 @@ void World::MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::
 	DrawMap();
 }
 
-void World::RunningDone(const int kPosY)
+void World::RunningDone()
 {
-	sleeping_blocks_.insert(std::make_pair(kPosY, playing_block_));
+	sleeping_polyos_.push_back(playing_polyo_);
 
-	if( IsCanCreateBlock(Vec2(10, 3)) )
+	/** 
+	TestBlock
+		**
+		 **
+	*/
+	std::vector<Vec2> tmp_block_pos;
+	tmp_block_pos.push_back(Vec2(0, 0));
+	tmp_block_pos.push_back(Vec2(1, 0));
+	tmp_block_pos.push_back(Vec2(1, 1));
+	tmp_block_pos.push_back(Vec2(2, 1));
+
+	if( IsCanCreateBlock(Vec2(10, 3), tmp_block_pos) )
 	{
 		CreateNextBlock();
 	}

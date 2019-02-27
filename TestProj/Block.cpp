@@ -1,6 +1,8 @@
 #include "Block.h"
 #include "World.h"
 
+#include "conio.h"
+
 Block::Block(Vec2 pos) :
 bef_time_(std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count()),
 my_pos_(pos)
@@ -24,9 +26,6 @@ Block::~Block()
 
 Block* Block::create(Vec2 pos)
 {
-	if( !World::getInstance()->IsCanCreateBlock(pos) )
-		return nullptr; // cannot create -> game over.
-
 	auto block = new(std::nothrow) Block(pos);
 
 	if( block != nullptr )
@@ -41,22 +40,30 @@ void Block::Run()
 {
 	isRunning_ = true;
 
+	std::thread key_thread(&Block::CheckKeyInput, this);
+
 	while( isRunning_ )
 	{
-		CheckKeyInput();
+		//CheckKeyInput();
 
 		auto now_time = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
 		if( now_time - bef_time_ >= BLOCK_TICK )
 		{
-
 			bef_time_ = now_time;
 			MoveBlock(eDirection::tDOWN);
 		}
 
 	}
+
+	key_thread.join();
 }
 
 void Block::update()
+{
+
+}
+
+void Block::MoveToBottom()
 {
 
 }
@@ -65,8 +72,11 @@ void Block::MoveBlock(const eDirection& kDirection)
 {
 	if( !World::getInstance()->IsCanMoveBlock(my_pos_, arr_move_dir_[kDirection]) )
 	{
-		isRunning_ = false;
-		World::getInstance()->RunningDone();
+		if( kDirection == eDirection::tDOWN )
+		{
+			isRunning_ = false;
+			World::getInstance()->RunningDone();
+		}
 		return;
 	}
 
@@ -74,13 +84,4 @@ void Block::MoveBlock(const eDirection& kDirection)
 	my_pos_ = my_pos_ + arr_move_dir_[kDirection];
 
 	World::getInstance()->MoveBlock(bef_pos, arr_move_dir_[kDirection], &block_shape_);
-}
-
-/**
-this function only execute array key and spacebar.
-except these case, send input to World.
-*/
-void Block::CheckKeyInput()
-{
-	//if( GetKeyState(VK_LEFT 
 }

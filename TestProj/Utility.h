@@ -8,6 +8,8 @@
 #include <array>
 #include <unordered_map>
 #include <map>
+#include <thread>
+#include <mutex>
 
 #define MAP_SIZE_X 20
 #define MAP_SIZE_Y 20
@@ -81,7 +83,7 @@ struct Vec2
 		y_ = y;
 	}
 
-	const Vec2 &operator+(const Vec2& rhs) const
+	const Vec2 operator+(const Vec2& rhs) const
 	{
 		Vec2 result = *this;
 		
@@ -91,7 +93,7 @@ struct Vec2
 		return result;
 	}
 
-	const bool &operator==(const Vec2& rhs) const
+	const bool operator==(const Vec2& rhs) const
 	{
 		return ( (*this).x_ == rhs.x_ && (*this).y_ == rhs.y_ );
 	}

@@ -64,11 +64,13 @@
   <ItemGroup>
     <ClCompile Include="Block.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Polyomino.cpp" />
     <ClCompile Include="Wall.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Block.h" />
+    <ClInclude Include="Polyomino.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Wall.h" />
     <ClInclude Include="World.h" />
