@@ -3,27 +3,39 @@
 
 #include "Utility.h"
 
+class Block;
 class Polyomino
 {
 
 private:
-	explicit Polyomino(Vec2 pos);
-	virtual ~Polyomino();
+	explicit Polyomino(const Vec2 pos);
 
-	void CreateBlocks(const Vec2& kRelativePos);
-	void MoveBlock(const eDirection& kDirection);
-public:
-	static Polyomino* create(Vec2 pos);
-	void Run();
+	void AddBlock(const Vec2& kBasePos, const Vec2& kRelativePos);
+	void MoveBlock(const eDirection& kDirection, const bool kNeedRedraw = true);
+	void RotateBlock(const bool kIsRight);
 
+	bool IsCanMoveBlock(const Vec2& kDir) const;
+	bool IsCanRotateBlock(const bool kIsRight) const;
+	bool HasFriendBlock(const Vec2& kBlockPos, const Vec2& kDir) const;
+	bool CheckReachBottom();
 	void CheckKeyInput();
 
+public:
+	static Polyomino* create(Vec2 pos);
+	virtual ~Polyomino();
+	void Run();
+
+	std::vector<std::shared_ptr<Block*>>* GetBlockList() const;
+
 private:
-	std::array<Vec2, eDirection_COUNT> arr_move_dir_;
-	std::vector<std::pair<Vec2, Block*>> blocks_;
+	Vec2 my_origin_;
+	std::vector<std::shared_ptr<Block*>>* blocks_;
+	std::vector<Vec2> shape_;
+	bool is_next_turn_to_right_;
 	time_t bef_time_;
-	Vec2 my_pos_;
-	bool isRunning_;
+	std::mutex move_mutex_;
+
+	SET_SYNTHESIZE_READONLY(bool, IsRunning, isRunning_);
 };
 
 #endif // #ifndef __TETRIS_POLYOMINO_H__

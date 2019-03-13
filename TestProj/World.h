@@ -18,27 +18,32 @@ private:
 	void RemoveLine();
 	void FillMap(const Vec2& kStartPos, const Vec2& kSize, const eSpaceType& kType);
 
-	void DrawMap(); // default function only can be called by world.
 	void DrawMap(const Vec2& kStartPos, const Vec2& kSize);
 
 	void GameLoop();
 	void update(time_t dt);
 	eSpaceType GetBlockTypeByPos(const Vec2& kPos) const;
+
 public:
 	static World* getInstance();
 
 	void CreateMap();
-	bool IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>& kRelativeCoordVec) const;
-	bool IsCanMoveBlock(const Vec2& pos, const Vec2& dir) const;
-	void MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::vector<Vec2>* kBlockShape);
+	bool IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>* kRelativeCoordVec) const;
+	bool IsBlank(const Vec2& pos) const;
+	void DrawMap();
+	void MoveBlock(const bool kNeedRedraw = true);
 	void RunningDone();
-
+	Vec2 GetDirection(const eDirection& kDir) const;
+	void addPositionBuffer(const Vec2& before, const Vec2& after);
 private:
+	std::array<Vec2, eDirection_COUNT> arr_move_dir_;
 	std::array<std::array<eSpaceType, MAP_SIZE_Y>, MAP_SIZE_X> gameboard_;
 	std::unordered_map<const char*, Wall*> map_wall_;
-	std::vector<Polyomino*> sleeping_polyos_;
+	std::multimap<int, std::shared_ptr<Block*>> sleeping_blocks_;
+	std::vector<std::pair<Vec2, Vec2>> pos_buffer_;
+	std::vector<int> deleted_line_;
 	std::mutex draw_mutex_;
-	
+
 	SET_SYNTHESIZE_READONLY(Polyomino*, PlayingPolyo, playing_polyo_);
 };
 

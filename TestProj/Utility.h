@@ -7,20 +7,31 @@
 #include <cmath>
 #include <array>
 #include <unordered_map>
+#include <iterator>
+#include <algorithm>
+#include <functional>
 #include <map>
 #include <thread>
 #include <mutex>
+#include <iomanip>
+#include <cassert>
+#include <memory>
 
-#define MAP_SIZE_X 20
+#define MAP_SIZE_X 12
 #define MAP_SIZE_Y 20
 #define BLOCK_TICK 500.f
+#define BLOCK_CREATE_POS ( Vec2(6, 2) )
 
 // this macro must use on bottom of class
 // or, must re-declare access specifier after use it.
 #define SET_SYNTHESIZE_READONLY(vartype, funcname, varname) \
 	private: vartype varname;\
+	public: vartype get##funcname(){return varname;};
+
+#define SET_SYNTHESIZE(vartype, funcname, varname) \
+	private: vartype varname;\
 	public: vartype get##funcname(){return varname;};\
-			void set##funcname(vartype var){varname = var;};
+	void set##funcname(vartype var){varname = var;};
 
 #define CREATE_FUNC(__TYPE__) \
 static __TYPE__* create() \
@@ -91,6 +102,14 @@ struct Vec2
 		result.y_ += rhs.y_;
 
 		return result;
+	}
+
+	Vec2& operator+=(const Vec2& rhs)
+	{	
+		this->x_ += rhs.x_;
+		this->y_ += rhs.y_;
+
+		return *this;
 	}
 
 	const bool operator==(const Vec2& rhs) const

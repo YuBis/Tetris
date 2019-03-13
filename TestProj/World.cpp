@@ -1,5 +1,6 @@
 #include "World.h"
 #include "Wall.h"
+#include "Polyomino.h"
 #include "Block.h"
 
 World* World::instance_ = nullptr;
@@ -24,6 +25,11 @@ playing_polyo_(nullptr)
 			gameboard_[x][y] = tBLANK;
 		}
 	}
+
+	arr_move_dir_[eDirection::tUP] = Vec2(0, -1);
+	arr_move_dir_[eDirection::tDOWN] = Vec2(0, 1);
+	arr_move_dir_[eDirection::tLEFT] = Vec2(-1, 0);
+	arr_move_dir_[eDirection::tRIGHT] = Vec2(1, 0);
 }
 
 World::~World()
@@ -54,7 +60,7 @@ void World::CreateMap()
 }
 
 void World::CreateWall()
-{
+{ 
 	map_wall_["LEFT"]   = new Wall(Vec2(0, 0), Vec2(1, MAP_SIZE_Y));
 	map_wall_["BOTTOM"] = new Wall(Vec2(0, MAP_SIZE_Y - 1), Vec2(MAP_SIZE_X, 1));
 	map_wall_["RIGHT"]  = new Wall(Vec2(MAP_SIZE_X - 1, 0), Vec2(1, MAP_SIZE_Y));
@@ -69,13 +75,17 @@ void World::CreateWall()
 
 void World::CreateNextBlock()
 {
-	auto block = Block::create(Vec2(10, 3));
+	auto polyo = Polyomino::create(BLOCK_CREATE_POS);
 
-	if( block )
+	if( polyo )
 	{
-		gameboard_[10][3] = eSpaceType::tBLOCK;
-		playing_block_ = block;
-		block->Run();
+		for( const auto kBlock : *polyo->GetBlockList() )
+		{
+			gameboard_[(*kBlock)->getBlockPosition().x_][(*kBlock)->getBlockPosition().y_] = eSpaceType::tBLOCK;
+		}
+
+		playing_polyo_ = polyo;
+		polyo->Run();
 	}
 	else
 	{
@@ -88,12 +98,12 @@ void World::RemoveLine()
 
 }
 
-bool World::IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>& kRelativeCoordVec) const
+bool World::IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>* kRelativeCoordVec) const
 {
-	if( kRelativeCoordVec.size() == 0 )
+	if( kRelativeCoordVec->size() == 0 )
 		return gameboard_[kPos.x_][kPos.y_] == eSpaceType::tBLANK;
 
-	for( const auto kCoord : kRelativeCoordVec )
+	for( const auto kCoord : *kRelativeCoordVec )
 	{
 		if( gameboard_[kPos.x_ + kCoord.x_][kPos.y_ + kCoord.y_] != eSpaceType::tBLANK )
 			return false;
@@ -102,10 +112,9 @@ bool World::IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>& kRelativ
 	return true;
 }
 
-bool World::IsCanMoveBlock(const Vec2& pos, const Vec2& dir) const
+bool World::IsBlank(const Vec2& pos) const
 {
-	const auto kCheckingPos = pos + dir;
-	return GetBlockTypeByPos(kCheckingPos) == eSpaceType::tBLANK;
+	return GetBlockTypeByPos(pos) == eSpaceType::tBLANK;
 }
 
 eSpaceType World::GetBlockTypeByPos(const Vec2& kPos) const
@@ -143,28 +152,62 @@ void World::DrawMap()
 	DrawMap(Vec2(0, 0), Vec2(MAP_SIZE_X, MAP_SIZE_Y));
 }
 
-void World::MoveBlock(const Vec2& kStartPos, const Vec2& kMoveForce, const std::vector<Vec2>* kBlockShape)
+void World::MoveBlock(const bool kNeedRedraw)
 {
-	for (const auto& kBlockRelativeCoord : *kBlockShape)
+	for (const auto& kBlockRelativeCoord : pos_buffer_)
 	{
-		if( kBlockRelativeCoord == NULL_VEC2 ) continue;
+		if( kBlockRelativeCoord.first == NULL_VEC2 ) continue;
 
-		auto now_pos = kStartPos + kBlockRelativeCoord;
-		auto new_pos = now_pos + kMoveForce;
+		const auto kNowPos = kBlockRelativeCoord.first;
 		
-		gameboard_[now_pos.x_][now_pos.y_] = eSpaceType::tBLANK;
-		gameboard_[new_pos.x_][new_pos.y_] = eSpaceType::tBLOCK;
+		gameboard_[kNowPos.x_][kNowPos.y_] = eSpaceType::tBLANK;
 	}
 
-	//auto startpos = Vec2(std::min<int>(kStartPos.x_, kStartPos.x_ + kMoveForce.x_), std::min<int>(kStartPos.y_, kStartPos.y_ + kMoveForce.y_));
-	//auto drawsize = Vec2(abs(start_pos.x_ - end_pos.x_), abs(start_pos.y_ - end_pos.y_));
-	 // todo : move block in array
-	DrawMap();
+	for (const auto& kBlockRelativeCoord : pos_buffer_)
+	{
+		if( kBlockRelativeCoord.second == NULL_VEC2 ) continue;
+
+		const auto kNewPos = kBlockRelativeCoord.second;
+		
+		gameboard_[kNewPos.x_][kNewPos.y_] = eSpaceType::tBLOCK;
+	}
+
+	pos_buffer_.clear();
+
+	if ( kNeedRedraw )
+		DrawMap();
+}
+
+void World::addPositionBuffer(const Vec2& kBeforePos, const Vec2& kAfterPos)
+{
+	pos_buffer_.push_back(std::make_pair(kBeforePos, kAfterPos));
 }
 
 void World::RunningDone()
 {
-	sleeping_polyos_.push_back(playing_polyo_);
+	std::vector<int> check_lines_;
+	 
+	for( unsigned int i = 0 ; i < playing_polyo_->GetBlockList()->size() ; i++ )
+	{
+		auto block = playing_polyo_->GetBlockList()->at(i);
+		check_lines_.push_back((*block)->getBlockPosition().y_);
+
+		sleeping_blocks_.emplace(std::make_pair((*block)->getBlockPosition().y_, block));
+	}
+
+	playing_polyo_->GetBlockList()->clear();
+	delete playing_polyo_;
+
+	std::sort(check_lines_.begin(), check_lines_.end());
+	check_lines_.erase( std::unique( check_lines_.begin(), check_lines_.end() ), check_lines_.end() );
+
+	// check line is full
+	for( unsigned int i = 0 ; i < check_lines_.size() ; i++ )
+	{
+		auto line_list = sleeping_blocks_.count(check_lines_.at(i));
+		if( line_list != (MAP_SIZE_X - 2) )
+			deleted_line_.push_back(check_lines_.at(i));
+	}
 
 	/** 
 	TestBlock
@@ -177,8 +220,13 @@ void World::RunningDone()
 	tmp_block_pos.push_back(Vec2(1, 1));
 	tmp_block_pos.push_back(Vec2(2, 1));
 
-	if( IsCanCreateBlock(Vec2(10, 3), tmp_block_pos) )
+	if( IsCanCreateBlock(BLOCK_CREATE_POS, &tmp_block_pos) )
 	{
 		CreateNextBlock();
 	}
+}
+
+Vec2 World::GetDirection(const eDirection& kDir) const
+{
+	return arr_move_dir_[kDir];
 }
