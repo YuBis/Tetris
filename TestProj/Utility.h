@@ -18,9 +18,12 @@
 #include <memory>
 
 #define MAP_SIZE_X 12
-#define MAP_SIZE_Y 20
+#define MAP_SIZE_Y 24
+#define BLOCK_CHARACTER_BYTES 2
 #define BLOCK_TICK 500.f
 #define BLOCK_CREATE_POS ( Vec2(6, 2) )
+#define BLOCK_COUNT 4
+#define POLYO_KIND 7
 
 // this macro must use on bottom of class
 // or, must re-declare access specifier after use it.
@@ -68,15 +71,6 @@ enum eDirection
 	eDirection_COUNT
 };
 
-enum eBlockCount
-{
-	tTROMINO = 3,
-	tTETROMINO = 4,
-	tPENTOMINO = 5,
-	tHEXOMINO = 6,
-};
-
-
 struct Vec2
 {
 	int x_;
@@ -116,25 +110,22 @@ struct Vec2
 	{
 		return ( (*this).x_ == rhs.x_ && (*this).y_ == rhs.y_ );
 	}
-
-#define NULL_VEC2 (Vec2(INT_MAX, INT_MAX))
-
 };
 
 static void gotoxy(int x,int y)
 {
-	COORD pos={x,y};
+	COORD pos={x * BLOCK_CHARACTER_BYTES, y};
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos); 
 }
 
-static char GetBlockShape(eSpaceType type)
+static char* GetBlockShape(eSpaceType type)
 {
 	switch (type)
 	{
-		case tBLANK : return ' '; break;
-		case tBLOCK : return '*'; break;
-		case tWALL : return '@'; break;
-		default : return '?'; break;
+		case tBLANK : return " "; break;
+		case tBLOCK : return "бр"; break;
+		case tWALL : return "бс"; break;
+		default : return "?"; break;
 	}
 };
 

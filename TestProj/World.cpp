@@ -2,6 +2,11 @@
 #include "Wall.h"
 #include "Polyomino.h"
 #include "Block.h"
+#include "json.h"
+
+#include <fstream>
+#include <iostream>
+#include <random>
 
 World* World::instance_ = nullptr;
 
@@ -16,8 +21,11 @@ World* World::getInstance()
 }
 
 World::World() :
-playing_polyo_(nullptr)
+	playing_polyo_(nullptr),
+	game_is_running_(true)
 {
+	ParseBlockTemplate();
+
 	for( int y = 0 ; y < MAP_SIZE_Y ; y++ )
 	{
 		for( int x = 0 ; x < MAP_SIZE_X ; x++ )
@@ -39,16 +47,60 @@ World::~World()
 
 void World::GameLoop()
 {
-	//while (true) 
-	{
-		auto thistime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-		//update(thistime - bef_time_);
+	std::random_device rd;
+    std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> dis(0, POLYO_KIND - 1);
 
+	while ( game_is_running_ ) 
+	{
+		if( playing_polyo_ == nullptr )
+		{
+			const int kPolyoIdx = dis(gen);
+			const auto kSelectedBlock = polyo_template_list_.at(kPolyoIdx);
+
+			if( IsCanCreateBlock(BLOCK_CREATE_POS, kSelectedBlock.second) )
+			{
+				CreateNextBlock(kPolyoIdx);
+			}
+			else
+			{
+				game_is_running_ = false;
+			}
+		}
 	}
 }
 
-void World::update(time_t dt)
+void World::ParseBlockTemplate()
 {
+	std::ifstream json_file("blocks.json");
+	Json::Value root;
+	Json::Reader reader;
+
+	if( reader.parse(json_file, root) )
+	{
+		const auto &kWholeData = root["blocks"];
+
+		for( int i = 0 ; i < POLYO_KIND ; i++ )
+		{
+			const auto &kBlock = kWholeData[std::to_string(i)]; 
+			const auto &kDirInfo = kBlock["direction"];
+			const auto &kCoordInfo = kBlock["coord"];
+			std::vector<Vec2>* coord_list = new std::vector<Vec2>();
+
+			for( int j = 0 ; j < BLOCK_COUNT ; j++ )
+			{
+				coord_list->push_back(Vec2(kCoordInfo[j][0].asInt(), kCoordInfo[j][1].asInt()));
+			}
+
+			polyo_template_list_.push_back(std::make_pair(kDirInfo.asInt(), coord_list));
+		}
+	}
+	else
+	{
+		// block shape parse failed!
+		std::cout  << reader.getFormattedErrorMessages() << "\n";
+		assert(false);
+	}
 }
 
 
@@ -56,7 +108,7 @@ void World::CreateMap()
 {
 	CreateWall();
 	DrawMap();
-	CreateNextBlock();
+	GameLoop();
 }
 
 void World::CreateWall()
@@ -73,9 +125,9 @@ void World::CreateWall()
 	}
 }
 
-void World::CreateNextBlock()
+void World::CreateNextBlock(const int& kPolyoIdx)
 {
-	auto polyo = Polyomino::create(BLOCK_CREATE_POS);
+	auto polyo = Polyomino::create(BLOCK_CREATE_POS, kPolyoIdx);
 
 	if( polyo )
 	{
@@ -93,9 +145,14 @@ void World::CreateNextBlock()
 	}
 }
 
-void World::RemoveLine()
+void World::RemoveLine(const int kLine)
 {
+	for( unsigned int i = 1 ; i < MAP_SIZE_X - 1 ; i++ )
+	{
+		gameboard_[i][kLine] = tBLANK;
+	}
 
+	sleeping_blocks_.erase(kLine);
 }
 
 bool World::IsCanCreateBlock(const Vec2& kPos, const std::vector<Vec2>* kRelativeCoordVec) const
@@ -122,6 +179,11 @@ eSpaceType World::GetBlockTypeByPos(const Vec2& kPos) const
 	return gameboard_[kPos.x_][kPos.y_];
 }
 
+std::pair<int, std::vector<Vec2>*>* World::getPolyoTemplate(const int& kPolyoIdx)
+{
+	return &polyo_template_list_.at(kPolyoIdx);
+}
+
 void World::FillMap(const Vec2& kStartPos, const Vec2& kSize, const eSpaceType& kType)
 {
 	for( int y = kStartPos.y_ ; y < kStartPos.y_ + kSize.y_ ; ++y )
@@ -141,7 +203,7 @@ void World::DrawMap(const Vec2& kStartPos, const Vec2& kSize)
 		for( int x = kStartPos.x_ ; x < kSize.x_ ; x++ )
 		{
 			gotoxy(x, y);
-			putchar(GetBlockShape(gameboard_[x][y]));
+			std::cout << GetBlockShape(gameboard_[x][y]);
 		}
 	}
 	draw_mutex_.unlock();
@@ -152,23 +214,19 @@ void World::DrawMap()
 	DrawMap(Vec2(0, 0), Vec2(MAP_SIZE_X, MAP_SIZE_Y));
 }
 
-void World::MoveBlock(const bool kNeedRedraw)
+void World::MoveBlock(const bool kNeedRedraw /* = true */)
 {
 	for (const auto& kBlockRelativeCoord : pos_buffer_)
 	{
-		if( kBlockRelativeCoord.first == NULL_VEC2 ) continue;
-
 		const auto kNowPos = kBlockRelativeCoord.first;
-		
+
 		gameboard_[kNowPos.x_][kNowPos.y_] = eSpaceType::tBLANK;
 	}
 
 	for (const auto& kBlockRelativeCoord : pos_buffer_)
 	{
-		if( kBlockRelativeCoord.second == NULL_VEC2 ) continue;
-
 		const auto kNewPos = kBlockRelativeCoord.second;
-		
+
 		gameboard_[kNewPos.x_][kNewPos.y_] = eSpaceType::tBLOCK;
 	}
 
@@ -183,10 +241,40 @@ void World::addPositionBuffer(const Vec2& kBeforePos, const Vec2& kAfterPos)
 	pos_buffer_.push_back(std::make_pair(kBeforePos, kAfterPos));
 }
 
+void World::OrderBlockDown(const int kStartLine)
+{
+	pos_buffer_.clear();
+
+	auto block_list_ = sleeping_blocks_.equal_range(kStartLine);
+
+	for( unsigned int y = kStartLine ; y > 1 ; y-- )
+	{
+		auto it = sleeping_blocks_.begin();
+
+		while ( it != sleeping_blocks_.end() )
+		{
+			if( it->first != y )
+			{
+				++it;
+				continue;
+			}
+
+			auto key = it->first + 1;
+			auto val = it->second;
+			(*it->second)->MoveBlock(eDirection::tDOWN);
+
+			it = sleeping_blocks_.erase(it);
+			sleeping_blocks_.insert(std::make_pair(key, val));
+		}
+
+		MoveBlock(false);
+	}
+}
+
 void World::RunningDone()
 {
 	std::vector<int> check_lines_;
-	 
+
 	for( unsigned int i = 0 ; i < playing_polyo_->GetBlockList()->size() ; i++ )
 	{
 		auto block = playing_polyo_->GetBlockList()->at(i);
@@ -204,26 +292,19 @@ void World::RunningDone()
 	// check line is full
 	for( unsigned int i = 0 ; i < check_lines_.size() ; i++ )
 	{
-		auto line_list = sleeping_blocks_.count(check_lines_.at(i));
-		if( line_list != (MAP_SIZE_X - 2) )
-			deleted_line_.push_back(check_lines_.at(i));
+		auto line_block_count = sleeping_blocks_.count(check_lines_.at(i));
+		if( line_block_count == (MAP_SIZE_X
+			- map_wall_["LEFT"]->getWallSize().x_
+			- map_wall_["RIGHT"]->getWallSize().x_ ) )
+		{
+			RemoveLine(check_lines_.at(i));
+			OrderBlockDown(check_lines_.at(i) - 1);
+		}
 	}
 
-	/** 
-	TestBlock
-		**
-		 **
-	*/
-	std::vector<Vec2> tmp_block_pos;
-	tmp_block_pos.push_back(Vec2(0, 0));
-	tmp_block_pos.push_back(Vec2(1, 0));
-	tmp_block_pos.push_back(Vec2(1, 1));
-	tmp_block_pos.push_back(Vec2(2, 1));
+	DrawMap();
 
-	if( IsCanCreateBlock(BLOCK_CREATE_POS, &tmp_block_pos) )
-	{
-		CreateNextBlock();
-	}
+	playing_polyo_ = nullptr;
 }
 
 Vec2 World::GetDirection(const eDirection& kDir) const

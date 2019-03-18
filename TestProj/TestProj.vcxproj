@@ -63,6 +63,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Block.cpp" />
+    <ClCompile Include="jsoncpp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Polyomino.cpp" />
     <ClCompile Include="Wall.cpp" />
@@ -70,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Block.h" />
+    <ClInclude Include="json.h" />
     <ClInclude Include="Polyomino.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Wall.h" />

@@ -21,7 +21,7 @@ my_pos_(pos)
 
 Block::~Block()
 {
-
+	OutputDebugString("Block removed!");
 }
 
 Block* Block::create(Vec2 pos)
@@ -34,7 +34,6 @@ Block* Block::create(Vec2 pos)
 	delete block;
 	block = nullptr;
 
-	assert(block != nullptr); // always assert when reach this line.
 	return nullptr;
 }
 
@@ -72,18 +71,12 @@ void Block::MoveToBottom()
 
 void Block::MoveBlock(const eDirection& kDirection)
 {
-	/*if( !World::getInstance()->IsCanMoveBlock(my_pos_, arr_move_dir_[kDirection]) )
-	{
-		if( kDirection == eDirection::tDOWN )
-		{
-			isRunning_ = false;
-			World::getInstance()->RunningDone();
-		}
-		return;
-	}
+	const auto kMoveVec = World::getInstance()->GetDirection(kDirection);
+	const auto kFromPos = getBlockPosition();
+	const auto kToPos = getBlockPosition() + kMoveVec;
 
-	auto bef_pos = my_pos_;
-	my_pos_ = my_pos_ + arr_move_dir_[kDirection];
+	World::getInstance()->addPositionBuffer(kFromPos, kToPos);
+	setBlockPosition(kToPos);
 
-	World::getInstance()->MoveBlock(bef_pos, arr_move_dir_[kDirection], &block_shape_);*/
+	World::getInstance()->MoveBlock(false);
 }

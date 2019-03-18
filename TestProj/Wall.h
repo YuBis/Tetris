@@ -12,8 +12,8 @@ private:
 public:
 	explicit Wall(Vec2 pos, Vec2 size);
 
-	SET_SYNTHESIZE_READONLY(Vec2, WallSize, wall_size_);
-	SET_SYNTHESIZE_READONLY(Vec2, WallPos, wall_pos_);
+	SET_SYNTHESIZE(Vec2, WallSize, wall_size_);
+	SET_SYNTHESIZE(Vec2, WallPos, wall_pos_);
 };
 
 #endif // #ifndef __TETRIS_WALL_H__

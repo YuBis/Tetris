@@ -4,25 +4,16 @@
 
 #include "conio.h"
 
-Polyomino::Polyomino(const Vec2 pos) :
-	bef_time_(std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count()),
+Polyomino::Polyomino(const Vec2& pos, const int& kTurnLimit, const std::vector<Vec2>* kBlockPos) :
+	bef_time_(0),
 	blocks_(nullptr),
-	is_next_turn_to_right_(true)
+	is_next_turn_to_right_(true),
+	turn_limit_(kTurnLimit)
 {
 	blocks_ = new std::vector<std::shared_ptr<Block*>>;
-	/** 
-	TestBlock
-	**
-	**
-	*/
 	my_origin_ = pos;
 
-	shape_.push_back(Vec2(-1, 0));
-	shape_.push_back(Vec2(0, 0));
-	shape_.push_back(Vec2(0, 1));
-	shape_.push_back(Vec2(1, 1));
-
-	std::for_each(shape_.cbegin(), shape_.cend(), [&](Vec2 relative_pos){
+	std::for_each(kBlockPos->cbegin(), kBlockPos->cend(), [&](Vec2 relative_pos){
 		AddBlock(my_origin_, relative_pos);
 	});
 }
@@ -35,28 +26,18 @@ Polyomino::~Polyomino()
 
 void Polyomino::AddBlock(const Vec2& kBasePos, const Vec2& kRelativePos)
 {
+	shape_.push_back(kRelativePos);
 	blocks_->push_back(std::make_shared<Block*>(Block::create(kBasePos + kRelativePos)));
 }
 
-Polyomino* Polyomino::create(Vec2 pos)
+Polyomino* Polyomino::create(const Vec2& pos, const int& kPolyoIdx)
 {
-	// todo: pick one polyomino shape from World::pharsedjson
-	// and replace tmp_block_pos.
-	/** 
-	TestBlock
-	**
-	**
-	*/
-	std::vector<Vec2> tmp_block_pos;
-	tmp_block_pos.push_back(Vec2(-1, 0));
-	tmp_block_pos.push_back(Vec2(0, 0));
-	tmp_block_pos.push_back(Vec2(0, 1));
-	tmp_block_pos.push_back(Vec2(1, 1));
+	const auto kThisPolyo = World::getInstance()->getPolyoTemplate(kPolyoIdx);
 
-	if( !World::getInstance()->IsCanCreateBlock(pos, &tmp_block_pos) )
+	if( !World::getInstance()->IsCanCreateBlock(pos, kThisPolyo->second) )
 		return nullptr; // cannot create -> game over.
 
-	auto polyo = new(std::nothrow) Polyomino(pos);
+	auto polyo = new(std::nothrow) Polyomino(pos, kThisPolyo->first, kThisPolyo->second);
 
 	if( polyo != nullptr )
 		return polyo;
@@ -99,7 +80,7 @@ void Polyomino::MoveBlock(const eDirection& kDirection, const bool kNeedRedraw)
 	std::transform(blocks_->begin(), blocks_->end(), blocks_->begin(), [kMoveVec](std::shared_ptr<Block*> block) -> std::shared_ptr<Block*>
 	{
 		const auto kFromPos = (*block)->getBlockPosition();
-		const auto kToPos = (*block)->getBlockPosition() + kMoveVec;
+		const auto kToPos = kFromPos + kMoveVec;
 
 		World::getInstance()->addPositionBuffer(kFromPos, kToPos);
 		(*block)->setBlockPosition(kToPos);
@@ -111,14 +92,14 @@ void Polyomino::MoveBlock(const eDirection& kDirection, const bool kNeedRedraw)
 	World::getInstance()->MoveBlock(kNeedRedraw);
 }
 
-void Polyomino::RotateBlock(const bool kIsRight)
+void Polyomino::RotateBlock()
 {
-	std::transform(shape_.begin(), shape_.end(), shape_.begin(), [kIsRight](Vec2 relative_pos)
+	std::transform(shape_.begin(), shape_.end(), shape_.begin(), [&](Vec2 relative_pos)
 	{
 		auto x_new = relative_pos.y_;
 		auto y_new = relative_pos.x_;
 
-		if( kIsRight )
+		if( is_next_turn_to_right_ )
 			x_new *= -1;
 		else
 			y_new *= -1;
@@ -134,6 +115,16 @@ void Polyomino::RotateBlock(const bool kIsRight)
 	}
 
 	World::getInstance()->MoveBlock();
+}
+
+void Polyomino::ChangeRotateState()
+{
+	// base case : point symmetry block has only 2 direction
+	if( turn_limit_ == 2 )
+	{
+		is_next_turn_to_right_ = !is_next_turn_to_right_;
+		return;
+	}	
 }
 
 /**
@@ -172,10 +163,10 @@ void Polyomino::CheckKeyInput()
 		case 'w' :
 			{
 				move_mutex_.lock();
-				if( IsCanRotateBlock(is_next_turn_to_right_) )
+				if( IsCanRotateBlock() )
 				{
-					RotateBlock(is_next_turn_to_right_);
-					is_next_turn_to_right_ = !is_next_turn_to_right_;
+					RotateBlock();
+					ChangeRotateState();
 				}
 				move_mutex_.unlock();
 			} break;
@@ -213,8 +204,12 @@ bool Polyomino::IsCanMoveBlock(const Vec2& kDir) const
 	return true;
 }
 
-bool Polyomino::IsCanRotateBlock(const bool kIsRight) const
+bool Polyomino::IsCanRotateBlock() const
 {
+	// base case : square block cannot turn
+	if( turn_limit_ == 1 )
+		return false;
+
 	// anchor point is (0,0)
 
 	for( const auto kBlockShape : shape_ )
@@ -222,7 +217,7 @@ bool Polyomino::IsCanRotateBlock(const bool kIsRight) const
 		auto x_new = kBlockShape.y_;
 		auto y_new = kBlockShape.x_;
 
-		if( kIsRight )
+		if( is_next_turn_to_right_ )
 			x_new *= -1;
 		else
 			y_new *= -1;
